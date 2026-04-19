@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SNMP мониторинг</title>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .container { max-width: 500px; margin: auto; }
+        input, button { display: block; width: 100%; margin: 8px 0; padding: 8px; }
+        .result { margin-top: 16px; padding: 12px; background: #f0f0f0; border-radius: 6px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>SNMP запрос</h2>
+
+    <!-- Форма отправляется через HTMX (асинхронно) -->
+    <form hx-post="/snmp/get" hx-target="#snmpResult" hx-swap="innerHTML">
+        <input type="text" name="ip" placeholder="IP устройства (например, 192.168.1.1)" required>
+        <input type="text" name="community" placeholder="Community (например, public)" value="public">
+        <input type="text" name="oid" placeholder="OID (например, 1.3.6.1.2.1.1.1.0)" value="1.3.6.1.2.1.1.1.0">
+        <button type="submit">Получить</button>
+    </form>
+
+    <div id="snmpResult">
+        <!-- Сюда HTMX подставит результат -->
+    </div>
+</div>
+</body>
+</html>
