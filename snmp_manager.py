@@ -2,6 +2,7 @@ from pysnmp.hlapi.v3arch.asyncio import *
 import asyncio
 import platform
 import subprocess
+import ipaddress
 
 class MonitoringManager:
     def __init__(self, ip_list = None, interval = 5):
@@ -16,6 +17,8 @@ class MonitoringManager:
             raise ValueError("Interval must be greater than 1 second")
         else:
             self.__interval = interval
+
+        self.monitoring_result = {}
 
     @property
     def ip_list(self):
@@ -38,13 +41,19 @@ class MonitoringManager:
             self.__interval = value
 
     def validate_ip_list(self, ip_list):
+        for ip in ip_list:
+            try:
+                ipaddress.ip_address(ip)
+            except ValueError:
+                return False
         return True
 
     def append_ip_list(self, ip):
         if ip not in self.ip_list:
             if self.validate_ip_list(ip):
                 self.ip_list.append(ip)
-                print("Added " + ip)
+            else:
+                raise ValueError("Invalid ip address")
 
     def ping(self, ip):
         if platform.system().lower() == "windows":
@@ -61,7 +70,7 @@ class MonitoringManager:
             ContextData(),
             ObjectType(ObjectIdentity(module, oid, 0)))
         if error_indication:
-            print("ERROR: " + str(error_indication))
+            print("ERROR at " + ip + ": " + str(error_indication))
         return response
 
     async def snmp_poll(self):
@@ -71,8 +80,14 @@ class MonitoringManager:
 
                 if response:
                     uptime = response[0][1]
-                    print(f"{ip} : Uptime: {uptime}")
+                    self.monitoring_result[ip] = {
+                        "uptime": str(uptime),
+                        "timestamp": asyncio.get_event_loop().time()
+                    }
                 else:
-                    print(f"{ip} : No response")
+                    self.monitoring_result[ip] = {
+                        "error": "No response",
+                        "timestamp": asyncio.get_event_loop().time()
+                    }
 
             await asyncio.sleep(self.interval)

@@ -1,16 +1,24 @@
 import asyncio
+from contextlib import asynccontextmanager
+from fastapi.templating import Jinja2Templates
 from snmp_manager import *
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
 
-async def main():
-    print("Begin SNMP scanning")
-    print("Setting up continuous polling loop")
+monitoring_manager = MonitoringManager(["192.168.1.1"], 1)
 
-    monitoring_manager = MonitoringManager([], 1)
-    monitoring_manager.append_ip_list("192.168.1.1")
-    monitoring_manager.append_ip_list("demo.pysnmp.com")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Запускаем фоновую задачу опроса
+    poll_task = asyncio.create_task(monitoring_manager.snmp_poll())
+    yield
+    # При выключении сервера – останавливаем задачу
+    poll_task.cancel()
+    await poll_task
 
-    task = asyncio.create_task(monitoring_manager.snmp_poll())
-    await task
+app = FastAPI(lifespan=lifespan)
+templates = Jinja2Templates(directory="templates")
 
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.get("/", response_class=HTMLResponse)
+def read_root(request: Request):
+    return templates.TemplateResponse(request, "index.html", context={"monitoring_result" : monitoring_manager.monitoring_result})
