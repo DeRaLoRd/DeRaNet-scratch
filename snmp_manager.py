@@ -74,20 +74,25 @@ class MonitoringManager:
         return response
 
     async def snmp_poll(self):
-        while True:
-            for ip in self.ip_list:
-                response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysUpTime")
-
-                if response:
-                    uptime = response[0][1]
-                    self.monitoring_result[ip] = {
-                        "uptime": str(uptime),
-                        "timestamp": asyncio.get_event_loop().time()
-                    }
-                else:
-                    self.monitoring_result[ip] = {
-                        "error": "No response",
-                        "timestamp": asyncio.get_event_loop().time()
-                    }
-
-            await asyncio.sleep(self.interval)
+        try:
+            while True:
+                for ip in self.ip_list:
+                    # TODO add many attributes to poll
+                    response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysUpTime")
+                    if response:
+                        uptime = response[0][1]
+                        self.monitoring_result[ip] = {
+                            "uptime": str(uptime),
+                            "timestamp": asyncio.get_event_loop().time()
+                        }
+                    else:
+                        self.monitoring_result[ip] = {
+                            "error": "No response",
+                            "timestamp": asyncio.get_event_loop().time()
+                        }
+                await asyncio.sleep(self.interval)
+        except asyncio.CancelledError:
+            print("SNMP polling cancelled")
+            return
+        except Exception as e:
+            print("SNMP polling error: " + str(e))

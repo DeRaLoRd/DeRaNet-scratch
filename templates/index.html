@@ -4,17 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SNMP Monitoring</title>
+    <script src="https://unpkg.com/htmx.org@2.0.0"></script>
 </head>
 <body>
     <h2>Сведения об устройствах</h2>
-    {% for result in monitoring_result %}
-    <div>
-        <p>IP адрес хоста: {{ result }}</p>
-        <p>Uptime: {{ result["uptime"] }}</p>
-        <p>Timestamp: {{ result.timestamp }}</p>
+    <div id="metrics" hx-get="/get/metrics" hx-trigger="every 5s" hx-swap="innerHTML">
+        Загрузка данных...
     </div>
-    {% endfor %}
-
-    <p>Весь результат: <br>{{monitoring_result}}</p>
 </body>
 </html>

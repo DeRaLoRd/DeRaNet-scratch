@@ -9,10 +9,8 @@ monitoring_manager = MonitoringManager(["192.168.1.1"], 1)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Запускаем фоновую задачу опроса
     poll_task = asyncio.create_task(monitoring_manager.snmp_poll())
     yield
-    # При выключении сервера – останавливаем задачу
     poll_task.cancel()
     await poll_task
 
@@ -21,4 +19,17 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
-    return templates.TemplateResponse(request, "index.html", context={"monitoring_result" : monitoring_manager.monitoring_result})
+    return templates.TemplateResponse(request, "index.html", context={"result" : monitoring_manager.monitoring_result})
+
+@app.get("/get/metrics", response_class=HTMLResponse)
+def get_metrics(request: Request):
+    if not monitoring_manager.monitoring_result:
+        return "<p>N/A</p>"
+    else:
+        string = []
+
+        for ip, data in monitoring_manager.monitoring_result.items():
+            string.append(f"<p>IP: {ip}</p>")
+            string.append(f"<p>Uptime: {data['uptime']}</p>")
+
+        return ''.join(string)
