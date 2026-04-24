@@ -2,10 +2,17 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi.templating import Jinja2Templates
 from snmp_manager import *
-from fastapi import FastAPI, Request
+from device_manager import *
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
+from datetime import datetime
 
-monitoring_manager = MonitoringManager(["192.168.1.1"], 1)
+def convert_uptime(seconds: int) -> str:
+    return datetime.fromtimestamp(seconds).strftime('%d days, %H:%M:%S')
+
+monitoring_manager = MonitoringManager(["192.168.1.1"], 5)
+device_manager = DeviceManager(["192.168.1.1"])
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,22 +21,68 @@ async def lifespan(app: FastAPI):
     poll_task.cancel()
     await poll_task
 
+
 app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory="templates")
 
+
 @app.get("/", response_class=HTMLResponse)
 def read_root(request: Request):
-    return templates.TemplateResponse(request, "index.html", context={"result" : monitoring_manager.monitoring_result})
+    return templates.TemplateResponse(request, "index.html",
+                                      context={
+                                          "monitoring_manager": monitoring_manager
+                                      })
+
 
 @app.get("/get/metrics", response_class=HTMLResponse)
 def get_metrics(request: Request):
     if not monitoring_manager.monitoring_result:
         return "<p>N/A</p>"
     else:
-        string = []
+        string = [f"""
+            <table>
+                <thead>
+                    <tr>
+                        <th>IP</th> <th>CPU</th> <th>RAM</th> <th>Uptime</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """]
 
         for ip, data in monitoring_manager.monitoring_result.items():
-            string.append(f"<p>IP: {ip}</p>")
-            string.append(f"<p>Uptime: {data['uptime']}</p>")
+            string.append(f"""
+                        <tr>
+                            <td>{ip}<br/>{data['name']}</td> <td>--</td> <td>--</td> <td>{convert_uptime(int(data['uptime']) // 100)}</td>
+                        </tr>
+            """)
 
+        string.append("</tbody> </table>")
         return ''.join(string)
+
+
+@app.post("/post/interval", response_class=HTMLResponse)
+def post_interval(request: Request, interval: int = Form(...)):
+    try:
+        monitoring_manager.interval = interval
+    except ValueError:
+        message = "Недопустимое значение интервала"
+
+    message = f"Интервал опроса изменён: { interval } сек."
+    return templates.TemplateResponse(request, "panel.html",
+                                      context={
+                                          "monitoring_manager": monitoring_manager,
+                                          "message": message
+                                      })
+
+@app.get("/get/device-list", response_class=HTMLResponse)
+def get_device_list(request: Request):
+    return_string = ["<ul>"]
+    for device in device_manager.device_list:
+        return_string.append("<li>" + device + "</li>")
+    return_string.append("</ul>")
+    return "".join(return_string)
+
+@app.post("/post/new-device", response_class=HTMLResponse)
+def post_new_device(request: Request, device_name: str = Form(...)):
+    device_manager.device_list.append(device_name)
+    monitoring_manager.append_ip_list(device_name)

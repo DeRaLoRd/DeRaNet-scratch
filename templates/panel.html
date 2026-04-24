@@ -1,0 +1,22 @@
+<div id="monitoring">
+    <div id="metrics"
+         hx-get="/get/metrics"
+         hx-trigger="every {{ monitoring_manager.interval }}s"
+         hx-swap="innerHTML"
+         hx-target="">
+        <div class="metrics-table-wrapper">
+
+        </div>
+        Ожидание данных...
+    </div>
+    <form id="post-interval"
+          hx-post="/post/interval"
+          hx-target="#monitoring">
+        <label for="input-interval">Интервал опроса (сек.)</label>
+        <input id="input-interval" name="interval" type="number" value="{{ monitoring_manager.interval }}" required/>
+        <button type="submit">Применить</button>
+    </form>
+    {% if message %}
+    <p>{{ message }}</p>
+    {% endif %}
+</div>

@@ -4,8 +4,9 @@ import platform
 import subprocess
 import ipaddress
 
+
 class MonitoringManager:
-    def __init__(self, ip_list = None, interval = 5):
+    def __init__(self, ip_list=None, interval=5):
         self.engine = SnmpEngine()
 
         if not self.validate_ip_list(ip_list):
@@ -73,16 +74,36 @@ class MonitoringManager:
             print("ERROR at " + ip + ": " + str(error_indication))
         return response
 
+    async def snmp_walk(self, ip, community="public", module="SNMPv2-MIB", oid="sysDescr"):
+        error_indication, error_status, error_index, response = await next_cmd(
+            self.engine,
+            CommunityData(community),
+            await UdpTransportTarget.create((ip, 161)),
+            ContextData(),
+            ObjectType(ObjectIdentity(module, oid)),
+            lexicographicMode=False)
+        if error_indication:
+            print("ERROR at " + ip + ": " + str(error_indication))
+        return response
+
     async def snmp_poll(self):
         try:
             while True:
                 for ip in self.ip_list:
+                    structured_response = {}
                     # TODO add many attributes to poll
+                    response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysName")
+                    structured_response["sysName"] = response[0][1]
                     response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysUpTime")
+                    structured_response["sysUpTime"] = str(response[0][1])
+                    #response = await self.snmp_walk(ip, "public", "HOST-RESOURCES-MIB", "hrProcessorLoad")
+                    #structured_response["hrProcessorLoad"] = str(response[0][1])
+
+
                     if response:
-                        uptime = response[0][1]
                         self.monitoring_result[ip] = {
-                            "uptime": str(uptime),
+                            "name": structured_response["sysName"],
+                            "uptime": structured_response["sysUpTime"],
                             "timestamp": asyncio.get_event_loop().time()
                         }
                     else:
