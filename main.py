@@ -45,7 +45,7 @@ def get_metrics(request: Request):
             <table>
                 <thead>
                     <tr>
-                        <th>IP</th> <th>CPU</th> <th>RAM</th> <th>Uptime</th>
+                        <th>IP</th> <th>Ping</th> <th>CPU</th> <th>RAM</th> <th>Uptime</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -54,7 +54,7 @@ def get_metrics(request: Request):
         for ip, data in monitoring_manager.monitoring_result.items():
             string.append(f"""
                         <tr>
-                            <td>{ip}<br/>{data['name']}</td> <td>--</td> <td>--</td> <td>{convert_uptime(int(data['uptime']) // 100)}</td>
+                            <td>{ip}<br/>{data['name']}</td> <td>{data["ping"]}</td> <td>--</td> <td>--</td> <td>{convert_uptime(int(data['uptime']) // 100)}</td>
                         </tr>
             """)
 

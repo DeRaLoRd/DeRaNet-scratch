@@ -120,6 +120,7 @@ class MonitoringManager:
                     if response:
                         self.monitoring_result[device["ip"]] = {
                             "name": structured_response["sysName"],
+                            "ping": "DOWN" if self.ping(device["ip"]) else "UP",
                             "uptime": structured_response["sysUpTime"],
                             "timestamp": asyncio.get_event_loop().time()
                         }
