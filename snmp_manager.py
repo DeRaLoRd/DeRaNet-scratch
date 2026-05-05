@@ -7,9 +7,9 @@ import ipaddress
 
 
 class MonitoringManager:
-    def __init__(self, ip_list: List[str] = None, interval=5):
+    def __init__(self, device_list: List[str] = None, interval=5):
         self.engine = SnmpEngine()
-        self.__ip_list = []
+        self.__device_list = []
         self.__interval = 0
 
         """if not self.validate_ip_list(ip_list):
@@ -17,7 +17,7 @@ class MonitoringManager:
         else:
             self.__ip_list = ip_list"""
 
-        self.ip_list = ip_list
+        self.device_list = device_list
 
         """if interval < 1:
             raise ValueError("Interval must be greater than 1 second")
@@ -31,14 +31,17 @@ class MonitoringManager:
         # TODO: cleanup all the interactions in the code and initialization
 
     @property
-    def ip_list(self):
-        return self.__ip_list
+    def device_list(self):
+        return self.__device_list
 
-    @ip_list.setter
-    def ip_list(self, value):
+    @device_list.setter
+    def device_list(self, value):
         """if self.validate_ip_list(value):
             self.__ip_list = value"""
-        self.__ip_list = value
+        if value is None:
+            self.device_list = []
+        else:
+            self.__device_list = value
 
     @property
     def interval(self):
@@ -59,13 +62,17 @@ class MonitoringManager:
                 return False
         return True"""
 
-    def append_ip_list(self, ip):
+    def append_ip_list(self, device):
         """if ip not in self.ip_list:
             if self.validate_ip_list(ip):
                 self.ip_list.append(ip)
             else:
                 raise ValueError("Invalid ip address")"""
-        self.ip_list.append(ip)
+        self.device_list.append(device)
+
+    def update_device_list(self, device_list):
+        self.device_list = device_list
+        self.monitoring_result = {}
 
     def ping(self, ip):
         if platform.system().lower() == "windows":
@@ -100,24 +107,24 @@ class MonitoringManager:
     async def snmp_poll(self):
         try:
             while True:
-                for ip in self.ip_list:
+                for device in self.device_list:
                     structured_response = {}
                     # TODO add many attributes to poll
-                    response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysName")
+                    response = await self.snmp_get(device["ip"], "public", "SNMPv2-MIB", "sysName")
                     structured_response["sysName"] = response[0][1]
-                    response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysUpTime")
+                    response = await self.snmp_get(device["ip"], "public", "SNMPv2-MIB", "sysUpTime")
                     structured_response["sysUpTime"] = str(response[0][1])
                     # response = await self.snmp_walk(ip, "public", "HOST-RESOURCES-MIB", "hrProcessorLoad")
                     # structured_response["hrProcessorLoad"] = str(response[0][1])
 
                     if response:
-                        self.monitoring_result[ip] = {
+                        self.monitoring_result[device["ip"]] = {
                             "name": structured_response["sysName"],
                             "uptime": structured_response["sysUpTime"],
                             "timestamp": asyncio.get_event_loop().time()
                         }
                     else:
-                        self.monitoring_result[ip] = {
+                        self.monitoring_result[device["ip"]] = {
                             "error": "No response",
                             "timestamp": asyncio.get_event_loop().time()
                         }

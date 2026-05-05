@@ -12,8 +12,8 @@ def convert_uptime(seconds: int) -> str:
     return datetime.fromtimestamp(seconds).strftime('%d days, %H:%M:%S')
 
 
-device_manager = DeviceManager()
 monitoring_manager = MonitoringManager()
+device_manager = DeviceManager(mon_manager=monitoring_manager)
 
 
 @asynccontextmanager
@@ -95,7 +95,6 @@ def get_device_list(request: Request):
 def post_new_device(request: Request, device_address: str = Form(...)):
     # append device list
     device_manager.add_device(device_address)
-    monitoring_manager.append_ip_list(device_address)
 
     # return updated list
     return get_device_list(request)
