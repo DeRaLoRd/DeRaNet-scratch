@@ -13,21 +13,13 @@
 </head>
 <body>
 <div class="working-space-wrapper">
-    <div id="device-list-div" class="block-wrapper">
+    <div class="block-wrapper">
         <h2>Список устройств</h2>
         {% include "device-list.html" %}
     </div>
     <div id="monitoring-panel-div" class="block-wrapper">
         <h2>Сведения об устройствах</h2>
         {% include "panel.html" %}
-    </div>
-    <div class="block-wrapper">
-        <form hx-post="/post/new-device" hx-swap="none">
-            <h2>Добавить устройство</h2>
-            <label for="new-device-address">IP-адрес</label>
-            <input id="new-device-address" name="device_name" placeholder="0.0.0.0"/>
-            <button type="submit">Добавить</button>
-        </form>
     </div>
 </div>
 <div id="information-div" class="block-wrapper">

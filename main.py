@@ -4,14 +4,16 @@ from fastapi.templating import Jinja2Templates
 from snmp_manager import *
 from device_manager import *
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from datetime import datetime
+
 
 def convert_uptime(seconds: int) -> str:
     return datetime.fromtimestamp(seconds).strftime('%d days, %H:%M:%S')
 
-monitoring_manager = MonitoringManager(["192.168.1.1"], 5)
-device_manager = DeviceManager(["192.168.1.1"])
+
+device_manager = DeviceManager()
+monitoring_manager = MonitoringManager()
 
 
 @asynccontextmanager
@@ -67,22 +69,39 @@ def post_interval(request: Request, interval: int = Form(...)):
     except ValueError:
         message = "Недопустимое значение интервала"
 
-    message = f"Интервал опроса изменён: { interval } сек."
+    message = f"Интервал опроса изменён: {interval} сек."
     return templates.TemplateResponse(request, "panel.html",
                                       context={
                                           "monitoring_manager": monitoring_manager,
                                           "message": message
                                       })
 
+
 @app.get("/get/device-list", response_class=HTMLResponse)
 def get_device_list(request: Request):
-    return_string = ["<ul>"]
-    for device in device_manager.device_list:
-        return_string.append("<li>" + device + "</li>")
-    return_string.append("</ul>")
-    return "".join(return_string)
+    if (device_manager.device_list is None) or (len(device_manager.device_list) == 0):
+        return "<p>Список устройств пуст</p>"
+    else:
+        return_string = ["<ul id='device-list'>"]
+        for device in device_manager.device_list:
+            return_string.append(
+                f'<li class="device-list-element" hx-post="/post/delete-device/{device["id"]}" hx-target="#device-list-div" hx-swap="innerHTML" hx-trigger="click">' +
+                device["ip"] + "</li>")
+        return_string.append("</ul>")
+        return "".join(return_string)
+
 
 @app.post("/post/new-device", response_class=HTMLResponse)
-def post_new_device(request: Request, device_name: str = Form(...)):
-    device_manager.device_list.append(device_name)
-    monitoring_manager.append_ip_list(device_name)
+def post_new_device(request: Request, device_address: str = Form(...)):
+    # append device list
+    device_manager.add_device(device_address)
+    monitoring_manager.append_ip_list(device_address)
+
+    # return updated list
+    return get_device_list(request)
+
+
+@app.post("/post/delete-device/{removing_id}", response_class=HTMLResponse)
+def post_delete_device(request: Request, removing_id: int):
+    device_manager.delete_device(removing_id)
+    return get_device_list(request)

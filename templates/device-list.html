@@ -1,3 +1,9 @@
-<div hx-get="/get/device-list" hx-swap="innerHTML" hx-trigger="load">
+<div id="device-list-div" hx-get="/get/device-list" hx-swap="innerHTML" hx-trigger="load">
     <p>Список устройств пуст</p>
 </div>
+
+<form hx-post="/post/new-device" hx-swap="innerHTML" hx-target="#device-list-div">
+    <label for="new-device-address">IP-адрес</label>
+    <input id="new-device-address" name="device_address" placeholder="0.0.0.0"/>
+    <button type="submit">Добавить</button>
+</form>

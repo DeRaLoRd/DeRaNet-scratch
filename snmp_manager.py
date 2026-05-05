@@ -1,3 +1,4 @@
+from typing import List
 from pysnmp.hlapi.v3arch.asyncio import *
 import asyncio
 import platform
@@ -6,20 +7,28 @@ import ipaddress
 
 
 class MonitoringManager:
-    def __init__(self, ip_list=None, interval=5):
+    def __init__(self, ip_list: List[str] = None, interval=5):
         self.engine = SnmpEngine()
+        self.__ip_list = []
+        self.__interval = 0
 
-        if not self.validate_ip_list(ip_list):
+        """if not self.validate_ip_list(ip_list):
             raise RuntimeError("Invalid ip list")
         else:
-            self.__ip_list = ip_list
+            self.__ip_list = ip_list"""
 
-        if interval < 1:
+        self.ip_list = ip_list
+
+        """if interval < 1:
             raise ValueError("Interval must be greater than 1 second")
         else:
-            self.__interval = interval
+            self.__interval = interval"""
+
+        self.interval = interval
 
         self.monitoring_result = {}
+
+        # TODO: cleanup all the interactions in the code and initialization
 
     @property
     def ip_list(self):
@@ -27,8 +36,9 @@ class MonitoringManager:
 
     @ip_list.setter
     def ip_list(self, value):
-        if self.validate_ip_list(value):
-            self.__ip_list = value
+        """if self.validate_ip_list(value):
+            self.__ip_list = value"""
+        self.__ip_list = value
 
     @property
     def interval(self):
@@ -41,20 +51,21 @@ class MonitoringManager:
         else:
             self.__interval = value
 
-    def validate_ip_list(self, ip_list):
+    """def validate_ip_list(self, ip_list):
         for ip in ip_list:
             try:
                 ipaddress.ip_address(ip)
             except ValueError:
                 return False
-        return True
+        return True"""
 
     def append_ip_list(self, ip):
-        if ip not in self.ip_list:
+        """if ip not in self.ip_list:
             if self.validate_ip_list(ip):
                 self.ip_list.append(ip)
             else:
-                raise ValueError("Invalid ip address")
+                raise ValueError("Invalid ip address")"""
+        self.ip_list.append(ip)
 
     def ping(self, ip):
         if platform.system().lower() == "windows":
@@ -96,9 +107,8 @@ class MonitoringManager:
                     structured_response["sysName"] = response[0][1]
                     response = await self.snmp_get(ip, "public", "SNMPv2-MIB", "sysUpTime")
                     structured_response["sysUpTime"] = str(response[0][1])
-                    #response = await self.snmp_walk(ip, "public", "HOST-RESOURCES-MIB", "hrProcessorLoad")
-                    #structured_response["hrProcessorLoad"] = str(response[0][1])
-
+                    # response = await self.snmp_walk(ip, "public", "HOST-RESOURCES-MIB", "hrProcessorLoad")
+                    # structured_response["hrProcessorLoad"] = str(response[0][1])
 
                     if response:
                         self.monitoring_result[ip] = {
